@@ -43,6 +43,3 @@ def rss():
 </item>""" for i in items)
     rss = f"<?xml version='1.0' encoding='UTF-8'?><rss version='2.0'><channel><title>Merged RSS</title>{body}</channel></rss>"
     return Response(rss, mimetype='application/rss+xml')
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
