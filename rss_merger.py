@@ -6,16 +6,8 @@ from operator import itemgetter
 app = Flask(__name__)
 
 RSS_FEEDS = [
-    "http://himasoku.com/index.rdf",
-    "https://hamusoku.com/index.rdf",
-    "https://news4vip.livedoor.biz/index.rdf",
-    "https://alfalfalfa.com/index.rdf",
-    "https://itainews.com/index.rdf",
-    "http://blog.livedoor.jp/news23vip/index.rdf",
-    "http://yaraon-blog.com/feed",
-    "http://blog.livedoor.jp/bluejay01-review/index.rdf",
-    "https://www.4gamer.net/rss/index.xml",
-    "https://www.gizmodo.jp/atom.xml"
+    "https://rss.nhk.jp/rss/news/cat0.xml",
+    "https://gigazine.net/news/rss_2.0/"
 ]
 
 def fetch_and_sort():
