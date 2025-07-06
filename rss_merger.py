@@ -64,4 +64,4 @@ def rss():
 {body}
 </channel>
 </rss>"""
-    return Response(rss, mimetype='application/rss+xml')
+    return Response(rss, mimetype='text/xml')
