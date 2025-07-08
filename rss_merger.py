@@ -1,4 +1,4 @@
-from flask import Flask, Response
+from flask import Flask, Response, request
 import feedparser
 from datetime import datetime
 from operator import itemgetter
@@ -25,13 +25,15 @@ def fetch_and_sort():
         feed = feedparser.parse(url)
         site_title = feed.feed.get('title', '')
         for e in feed.entries:
-            pub = e.get('published_parsed') or e.get('updated_parsed')
-            if pub:
-                # descriptionと画像の抽出
+            try:
+                pub = e.get('published_parsed') or e.get('updated_parsed')
+                if not pub:
+                    continue
+
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # 優先：media_thumbnail, media_content, enclosures
+                # 優先的に取得
                 if 'media_thumbnail' in e:
                     thumbnail = e['media_thumbnail'][0]['url']
                 elif 'media_content' in e:
@@ -39,7 +41,7 @@ def fetch_and_sort():
                 elif 'enclosures' in e and len(e['enclosures']) > 0:
                     thumbnail = e['enclosures'][0]['href']
                 else:
-                    # 最後の手段：description内の<img src="..."> を抽出
+                    # description内から<img>を抽出
                     match = re.search(r'<img[^>]+src="([^"]+)"', desc_html)
                     if match:
                         thumbnail = match.group(1)
@@ -52,12 +54,19 @@ def fetch_and_sort():
                     'thumbnail': thumbnail
                 }
                 items.append(item)
+            except Exception as ex:
+                print(f"Error parsing entry: {ex}")
+                continue
 
     items.sort(key=itemgetter('pubDate'), reverse=True)
-    return items[:100]  # 最大50件まで
+    return items[:100]
 
-@app.route("/")
+@app.route("/", methods=["GET", "HEAD"])
 def rss():
+    # RenderのポートスキャンがHEADで判定しやすいように対応
+    if request.method == "HEAD":
+        return Response("OK", status=200, mimetype="text/plain")
+
     items = fetch_and_sort()
     body = "\n".join(f"""<item>
 <title>{i['title']}</title>
