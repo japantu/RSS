@@ -3,7 +3,7 @@ import feedparser
 from datetime import datetime
 from operator import itemgetter
 import re
-import html  # XML整形対応
+import html
 
 app = Flask(__name__)
 
@@ -34,7 +34,7 @@ def fetch_and_sort():
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # 優先的に画像URLを抽出
+                # 優先的に画像を抽出
                 if 'media_thumbnail' in e:
                     thumbnail = e['media_thumbnail'][0]['url']
                 elif 'media_content' in e:
@@ -42,7 +42,8 @@ def fetch_and_sort():
                 elif 'enclosures' in e and len(e['enclosures']) > 0:
                     thumbnail = e['enclosures'][0]['href']
                 else:
-                    match = re.search(r'<img[^>]+src="([^"]+)"', desc_html)
+                    # description内のimgタグ（src or data-src）を抽出
+                    match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
                     if match:
                         thumbnail = match.group(1)
 
@@ -63,18 +64,20 @@ def fetch_and_sort():
 
 @app.route("/", methods=["GET", "HEAD"])
 def rss():
-    # HEADリクエスト対策：Renderのポート検出を通す
     if request.method == "HEAD":
         return Response("OK", status=200, mimetype="text/plain")
 
     items = fetch_and_sort()
-    body = "\n".join(f"""<item>
+    body = ""
+    for i in items:
+        body += f"""<item>
 <title>{html.escape(i['title'])}</title>
 <link>{html.escape(i['link'])}</link>
 <description><![CDATA[{i['description']}]]></description>
-<pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
-<enclosure url="{html.escape(i['thumbnail'])}" type="image/jpeg" />
-</item>""" for i in items)
+<pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>"""
+        if i['thumbnail']:
+            body += f'\n<enclosure url="{html.escape(i["thumbnail"])}" type="image/jpeg" />'
+        body += "\n</item>\n"
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
 <rss version='2.0'>
