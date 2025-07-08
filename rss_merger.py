@@ -3,7 +3,7 @@ import feedparser
 from datetime import datetime
 from operator import itemgetter
 import re
-import html  # ← XML整形エラー防止に使用
+import html  # XML整形対応
 
 app = Flask(__name__)
 
@@ -34,7 +34,7 @@ def fetch_and_sort():
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # 優先的に画像を取得
+                # 優先的に画像URLを抽出
                 if 'media_thumbnail' in e:
                     thumbnail = e['media_thumbnail'][0]['url']
                 elif 'media_content' in e:
@@ -63,7 +63,7 @@ def fetch_and_sort():
 
 @app.route("/", methods=["GET", "HEAD"])
 def rss():
-    # HEADリクエストにも200で応答（Render誤検知対策）
+    # HEADリクエスト対策：Renderのポート検出を通す
     if request.method == "HEAD":
         return Response("OK", status=200, mimetype="text/plain")
 
@@ -71,13 +71,13 @@ def rss():
     body = "\n".join(f"""<item>
 <title>{html.escape(i['title'])}</title>
 <link>{html.escape(i['link'])}</link>
-<desc><![CDATA[{i['description']}]]></desc>
+<description><![CDATA[{i['description']}]]></description>
 <pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
-<media:thumbnail url="{html.escape(i['thumbnail'])}" />
+<enclosure url="{html.escape(i['thumbnail'])}" type="image/jpeg" />
 </item>""" for i in items)
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
-<rss version='2.0' xmlns:media="http://search.yahoo.com/mrss/">
+<rss version='2.0'>
 <channel>
 <title>Merged RSS</title>
 {body}
