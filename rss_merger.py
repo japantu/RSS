@@ -34,18 +34,10 @@ def fetch_and_sort():
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # 優先的に画像を抽出
-                if 'media_thumbnail' in e:
-                    thumbnail = e['media_thumbnail'][0]['url']
-                elif 'media_content' in e:
-                    thumbnail = e['media_content'][0]['url']
-                elif 'enclosures' in e and len(e['enclosures']) > 0:
-                    thumbnail = e['enclosures'][0]['href']
-                else:
-                    # description内のimgタグ（src or data-src）を抽出
-                    match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
-                    if match:
-                        thumbnail = match.group(1)
+                # description内の画像を最優先（<img src=...> or data-src）
+                match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
+                if match:
+                    thumbnail = match.group(1)
 
                 item = {
                     'title': f"{site_title}閂{e.get('title', '')}",
@@ -70,17 +62,20 @@ def rss():
     items = fetch_and_sort()
     body = ""
     for i in items:
+        content_encoded = i['description']
+        if i['thumbnail'] and i['thumbnail'] not in i['description']:
+            content_encoded = f'<div align="center"><img src="{html.escape(i["thumbnail"])}" /></div><br>' + i['description']
+
         body += f"""<item>
 <title>{html.escape(i['title'])}</title>
 <link>{html.escape(i['link'])}</link>
 <description><![CDATA[{i['description']}]]></description>
-<pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>"""
-        if i['thumbnail']:
-            body += f'\n<enclosure url="{html.escape(i["thumbnail"])}" type="image/jpeg" />'
-        body += "\n</item>\n"
+<pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
+<content:encoded><![CDATA[{content_encoded}]]></content:encoded>
+</item>\n"""
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
-<rss version='2.0'>
+<rss version='2.0' xmlns:content="http://purl.org/rss/1.0/modules/content/">
 <channel>
 <title>Merged RSS</title>
 {body}
