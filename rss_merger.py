@@ -31,19 +31,11 @@ def fetch_and_sort():
                 if not pub:
                     continue
 
-                # descriptionやsummaryのHTMLを取得
                 desc_html = e.get('description', '') or e.get('summary', '')
-                thumbnail = ''
-
-                # <img src="..."> または data-src 抽出
-                match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
-                if match:
-                    thumbnail = match.group(1)
-
-                # content:encoded に使うHTML（画像付き）
-                content_encoded = desc_html
-                if thumbnail and thumbnail not in desc_html:
-                    content_encoded = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
+                
+                # ★ 強制画像挿入（テスト用画像）
+                thumbnail = "https://placekitten.com/600/400"
+                content_encoded = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
 
                 item = {
                     'title': f"{site_title}閂{e.get('title', '')}",
