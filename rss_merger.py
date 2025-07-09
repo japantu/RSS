@@ -11,7 +11,7 @@ RSS_FEEDS = [
     "http://himasoku.com/index.rdf",
     "https://hamusoku.com/index.rdf",
     "http://blog.livedoor.jp/kinisoku/index.rdf",
-    "https://alfalfalfa.com/index.rdf",
+    "https://news.yahoo.co.jp/rss/topics/top-picks.xml",
     "https://itainews.com/index.rdf",
     "http://blog.livedoor.jp/news23vip/index.rdf",
     "http://yaraon-blog.com/feed",
@@ -34,15 +34,12 @@ def fetch_and_sort():
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # <img src="..."> または data-src を抽出
+                # <img src="..."> または data-src 抽出（どちらも対応）
                 match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
                 if match:
                     thumbnail = match.group(1)
-                else:
-                    # fallback画像（絶対に存在する画像URLでテスト）
-                    thumbnail = "https://www.gstatic.com/webp/gallery/1.jpg"
 
-                # description に img を先頭に埋め込む
+                # description に画像を埋め込む（重複しないようチェック）
                 if thumbnail and thumbnail not in desc_html:
                     desc_html = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
 
@@ -57,6 +54,7 @@ def fetch_and_sort():
                 print(f"Error parsing entry: {ex}")
                 continue
 
+    # 公開日時でソート
     items.sort(key=itemgetter('pubDate'), reverse=True)
     return items[:100]
 
