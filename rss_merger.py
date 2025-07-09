@@ -32,17 +32,25 @@ def fetch_and_sort():
                     continue
 
                 desc_html = e.get('description', '') or e.get('summary', '')
-                
-                # ★ 強制画像挿入（テスト用画像）
-                thumbnail = "https://placekitten.com/600/400"
-                content_encoded = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
+                thumbnail = ''
+
+                # <img src="..."> または data-src を抽出
+                match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
+                if match:
+                    thumbnail = match.group(1)
+                else:
+                    # fallback画像（絶対に存在する画像URLでテスト）
+                    thumbnail = "https://www.gstatic.com/webp/gallery/1.jpg"
+
+                # description に img を先頭に埋め込む
+                if thumbnail and thumbnail not in desc_html:
+                    desc_html = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
 
                 item = {
                     'title': f"{site_title}閂{e.get('title', '')}",
                     'link': e.get('link', ''),
                     'pubDate': datetime(*pub[:6]),
-                    'description': desc_html,
-                    'content': content_encoded
+                    'description': desc_html
                 }
                 items.append(item)
             except Exception as ex:
@@ -65,11 +73,10 @@ def rss():
 <link>{html.escape(i['link'])}</link>
 <description><![CDATA[{i['description']}]]></description>
 <pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
-<content:encoded><![CDATA[{i['content']}]]></content:encoded>
 </item>\n"""
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
-<rss version='2.0' xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version='2.0'>
 <channel>
 <title>Merged RSS</title>
 {body}
