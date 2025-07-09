@@ -34,17 +34,20 @@ def fetch_and_sort():
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # description内の画像を最優先（<img src=...> or data-src）
+                # 画像抽出（src または data-src に対応、' または " どちらでも可）
                 match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
                 if match:
                     thumbnail = match.group(1)
+
+                # description に画像がなければ、強制で先頭に追加
+                if thumbnail and thumbnail not in desc_html:
+                    desc_html = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>' + desc_html
 
                 item = {
                     'title': f"{site_title}閂{e.get('title', '')}",
                     'link': e.get('link', ''),
                     'pubDate': datetime(*pub[:6]),
-                    'description': desc_html,
-                    'thumbnail': thumbnail
+                    'description': desc_html
                 }
                 items.append(item)
             except Exception as ex:
@@ -62,20 +65,15 @@ def rss():
     items = fetch_and_sort()
     body = ""
     for i in items:
-        content_encoded = i['description']
-        if i['thumbnail'] and i['thumbnail'] not in i['description']:
-            content_encoded = f'<div align="center"><img src="{html.escape(i["thumbnail"])}" /></div><br>' + i['description']
-
         body += f"""<item>
 <title>{html.escape(i['title'])}</title>
 <link>{html.escape(i['link'])}</link>
 <description><![CDATA[{i['description']}]]></description>
 <pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
-<content:encoded><![CDATA[{content_encoded}]]></content:encoded>
 </item>\n"""
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
-<rss version='2.0' xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version='2.0'>
 <channel>
 <title>Merged RSS</title>
 {body}
