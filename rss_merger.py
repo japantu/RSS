@@ -11,7 +11,7 @@ RSS_FEEDS = [
     "http://himasoku.com/index.rdf",
     "https://hamusoku.com/index.rdf",
     "http://blog.livedoor.jp/kinisoku/index.rdf",
-    "https://news.yahoo.co.jp/rss/topics/top-picks.xml",
+    "https://www.lifehacker.jp/feed/index.xml",
     "https://itainews.com/index.rdf",
     "http://blog.livedoor.jp/news23vip/index.rdf",
     "http://yaraon-blog.com/feed",
@@ -34,27 +34,28 @@ def fetch_and_sort():
                 desc_html = e.get('description', '') or e.get('summary', '')
                 thumbnail = ''
 
-                # <img src="..."> または data-src 抽出（どちらも対応）
+                # <img src="..."> または data-src を抽出
                 match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
                 if match:
                     thumbnail = match.group(1)
 
-                # description に画像を埋め込む（重複しないようチェック）
+                # content:encoded に画像＋本文を含める
+                content_encoded = desc_html
                 if thumbnail and thumbnail not in desc_html:
-                    desc_html = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
+                    content_encoded = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{desc_html}'
 
                 item = {
                     'title': f"{site_title}閂{e.get('title', '')}",
                     'link': e.get('link', ''),
                     'pubDate': datetime(*pub[:6]),
-                    'description': desc_html
+                    'description': desc_html,
+                    'content': content_encoded
                 }
                 items.append(item)
             except Exception as ex:
                 print(f"Error parsing entry: {ex}")
                 continue
 
-    # 公開日時でソート
     items.sort(key=itemgetter('pubDate'), reverse=True)
     return items[:100]
 
@@ -71,10 +72,11 @@ def rss():
 <link>{html.escape(i['link'])}</link>
 <description><![CDATA[{i['description']}]]></description>
 <pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
+<content:encoded><![CDATA[{i['content']}]]></content:encoded>
 </item>\n"""
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
-<rss version='2.0'>
+<rss version='2.0' xmlns:content="http://purl.org/rss/1.0/modules/content/">
 <channel>
 <title>Merged RSS</title>
 {body}
