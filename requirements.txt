@@ -1,3 +1,5 @@
-flask
+Flask
 feedparser
+requests
+beautifulsoup4
 gunicorn
