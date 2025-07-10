@@ -88,7 +88,7 @@ def fetch_and_sort():
                 continue
 
     items.sort(key=itemgetter('pubDate'), reverse=True)
-    return items[:100]
+    return items[:20]
 
 @app.route("/", methods=["GET", "HEAD"])
 def rss():
