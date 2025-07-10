@@ -4,8 +4,6 @@ from datetime import datetime
 from operator import itemgetter
 import html
 import re
-import requests
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
@@ -13,7 +11,7 @@ RSS_FEEDS = [
     "http://himasoku.com/index.rdf",
     "https://hamusoku.com/index.rdf",
     "http://blog.livedoor.jp/kinisoku/index.rdf",
-    "https://www.lifehacker.jp/feed/index.xml",
+    "https://alfalfalfa.com/index.rdf",
     "https://itainews.com/index.rdf",
     "http://blog.livedoor.jp/news23vip/index.rdf",
     "http://yaraon-blog.com/feed",
@@ -25,22 +23,6 @@ RSS_FEEDS = [
 def extract_image_from_html(desc_html):
     match = re.search(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)["\']', desc_html)
     return match.group(1) if match else ""
-
-def fetch_og_image_from_page(url):
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        html_content = requests.get(url, headers=headers, timeout=5).text
-        soup = BeautifulSoup(html_content, "html.parser")
-        og = soup.find("meta", property="og:image")
-        if og and og.get("content"):
-            return og["content"]
-        # fallback: first image in page
-        img = soup.find("img")
-        if img and img.get("src"):
-            return img["src"]
-    except Exception as e:
-        print(f"OG image fetch failed for {url}: {e}")
-    return ""
 
 def fetch_and_sort():
     items = []
@@ -56,22 +38,18 @@ def fetch_and_sort():
                 title = f"{site_title}閂{e.get('title', '')}"
                 link = e.get('link', '')
                 summary = e.get('summary', '') or e.get('description', '')
-                content_encoded = ''
 
-                # Try to extract original <content:encoded>
+                # content:encoded の抽出
+                content_encoded = ''
                 if 'content' in e and isinstance(e['content'], list) and 'value' in e['content'][0]:
                     content_encoded = e['content'][0]['value']
                 else:
                     content_encoded = summary
 
-                # Try to extract image from HTML description
+                # 画像はdescriptionからのみ抽出（外部クロールなし）
                 thumbnail = extract_image_from_html(content_encoded)
 
-                # If image is not found, fetch og:image from page
-                if not thumbnail:
-                    thumbnail = fetch_og_image_from_page(link)
-
-                # Insert image at top of content
+                # 画像があれば先頭に埋め込む（検証用）
                 if thumbnail:
                     content_encoded = f'<div align="center"><img src="{html.escape(thumbnail)}" /></div><br>{content_encoded}'
 
@@ -87,8 +65,9 @@ def fetch_and_sort():
                 print(f"Error parsing entry from {url}: {ex}")
                 continue
 
+    # 件数制限（タイムアウト防止）
     items.sort(key=itemgetter('pubDate'), reverse=True)
-    return items[:20]
+    return items[:10]
 
 @app.route("/", methods=["GET", "HEAD"])
 def rss():
@@ -102,9 +81,12 @@ def rss():
 <title>{html.escape(i['title'])}</title>
 <link>{html.escape(i['link'])}</link>
 <description><![CDATA[{i['description']}]]></description>
-<pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
-<content:encoded><![CDATA[{i['content']}]]></content:encoded>
-</item>\n"""
+<pubDate>{i['pubDate'].strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>"""
+
+        if i['content']:
+            body += f"\n<content:encoded><![CDATA[{i['content']}]]></content:encoded>"
+
+        body += "\n</item>\n"
 
     rss = f"""<?xml version='1.0' encoding='UTF-8'?>
 <rss version='2.0' xmlns:content="http://purl.org/rss/1.0/modules/content/">
